@@ -112,7 +112,7 @@ export default function App() {
       })
       .catch(err => {
         console.error("Supabase getSession error:", err);
-        setAuthError("Erro ao verificar sessão: " + (err.message || "Erro desconhecido"));
+        setAuthError("Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.");
         setLoading(false);
       });
 
