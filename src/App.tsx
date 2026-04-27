@@ -6,13 +6,38 @@ import { Dashboard } from "./pages/Dashboard";
 import { NewTraining } from "./pages/NewTraining";
 import { Certificates } from "./pages/Certificates";
 import { Users } from "./pages/Users";
-import { supabase } from "./lib/supabase";
+import { supabase, supabaseConfigured } from "./lib/supabase";
 import { Shield, Loader2 } from "lucide-react";
 import { Toaster } from "sonner";
 
 import { OngoingTrainings } from "./pages/OngoingTrainings";
 
+function ConfigError() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f9fafb", fontFamily: "Inter, sans-serif", padding: "1rem" }}>
+      <div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderTop: "4px solid #ef4444", padding: "2rem", maxWidth: "500px", width: "100%" }}>
+        <h1 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#111827", marginBottom: "1rem" }}>
+          Configuração incompleta
+        </h1>
+        <p style={{ color: "#374151", fontSize: "0.875rem", lineHeight: 1.7, marginBottom: "1rem" }}>
+          As variáveis de ambiente do Supabase não estão configuradas. Para corrigir:
+        </p>
+        <ol style={{ color: "#374151", fontSize: "0.875rem", lineHeight: 1.7, paddingLeft: "1.25rem", marginBottom: "1rem" }}>
+          <li>Acesse o painel do <strong>Vercel</strong> → seu projeto → <strong>Settings → Environment Variables</strong></li>
+          <li>Adicione <code style={{ background: "#f3f4f6", padding: "0 4px", borderRadius: "3px" }}>VITE_SUPABASE_URL</code></li>
+          <li>Adicione <code style={{ background: "#f3f4f6", padding: "0 4px", borderRadius: "3px" }}>VITE_SUPABASE_ANON_KEY</code></li>
+          <li>Vá em <strong>Deployments → Redeploy</strong></li>
+        </ol>
+        <p style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+          Os valores estão em: Painel Supabase → Settings → API
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  if (!supabaseConfigured) return <ConfigError />;
   const [user, setUser] = useState<{ id: string; name: string; role: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
