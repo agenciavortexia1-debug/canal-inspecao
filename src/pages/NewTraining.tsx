@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Check, ChevronRight, Play, Square, RotateCcw, FileText, Upload, PenTool, Loader2, Clock } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { toast } from "sonner";
-import { cn, maskCPF, unmaskCPF, getUserIP } from "../lib/utils";
+import { cn, maskCPF, unmaskCPF, validateCPF, getUserIP } from "../lib/utils";
 import { supabase } from "../lib/supabase";
 import {
   TrainingType,
@@ -169,6 +169,11 @@ export const NewTraining: React.FC<NewTrainingProps> = ({ onComplete }) => {
     if (step === 1) {
       if (!trainee.nome || !trainee.cpf || !trainee.matricula || !config.local) {
         toast.error("Preencha todos os campos obrigatórios.");
+        return;
+      }
+
+      if (!validateCPF(trainee.cpf)) {
+        toast.error("CPF do colaborador inválido. Verifique os dígitos informados.");
         return;
       }
 
@@ -348,7 +353,8 @@ export const NewTraining: React.FC<NewTrainingProps> = ({ onComplete }) => {
       toast.success("Treinamento iniciado e histórico registrado!");
       onComplete();
     } catch (err: any) {
-      toast.error("Erro ao salvar treinamento: " + err.message);
+      console.error("Error saving ongoing training:", err);
+      toast.error("Erro ao salvar treinamento. Verifique sua conexão e tente novamente.");
     } finally {
       setSubmitting(false);
     }
@@ -468,9 +474,9 @@ export const NewTraining: React.FC<NewTrainingProps> = ({ onComplete }) => {
     } catch (err: any) {
       console.error("Error saving training:", err);
       if (err.message === "Failed to fetch") {
-        toast.error("Erro de conexão com o Supabase. Verifique sua internet.");
+        toast.error("Erro de conexão com o servidor. Verifique sua internet e tente novamente.");
       } else {
-        toast.error("Erro ao salvar treinamento: " + err.message);
+        toast.error("Erro ao salvar treinamento. Verifique sua conexão e tente novamente.");
       }
     } finally {
       setSubmitting(false);

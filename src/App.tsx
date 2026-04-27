@@ -25,7 +25,7 @@ export default function App() {
   const getDeviceId = () => {
     let id = localStorage.getItem("device_id");
     if (!id) {
-      id = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      id = crypto.randomUUID();
       localStorage.setItem("device_id", id);
     }
     return id;
@@ -51,17 +51,17 @@ export default function App() {
 
       if (error) {
         if (error.message.includes("row-level security")) {
-          throw new Error("Erro de Permissão (RLS): Você precisa configurar as políticas de segurança no Supabase para permitir a criação de perfis. Execute o SQL de configuração no painel do Supabase.");
+          throw new Error("Erro de permissão: as políticas de segurança do banco precisam ser configuradas. Contate o administrador.");
         }
-        throw error;
+        throw new Error("Não foi possível criar o perfil. Contate o administrador.");
       }
-      
+
       setAuthError(null);
       setNeedsProfile(null);
       fetchProfile(needsProfile.id);
     } catch (err: any) {
       console.error("Error repairing profile:", err);
-      setAuthError("Erro ao criar perfil: " + err.message);
+      setAuthError(err.message || "Erro ao criar perfil. Tente novamente ou contate o suporte.");
       setLoading(false);
     }
   };
@@ -161,19 +161,18 @@ export default function App() {
       if (error) {
         console.error("Profile fetch error details:", error);
         
-        // Se der erro de recursão ou não encontrar, tentamos identificar o usuário logado
         if (authUser) {
           setNeedsProfile({ id: authUser.id, email: authUser.email || "" });
-          
+
           if (error.code === "PGRST116") {
-            throw new Error(`Perfil não encontrado para o usuário ${authUser.email}. O usuário existe no Auth mas não na tabela 'profiles'.`);
+            throw new Error("Perfil de usuário não encontrado. Clique em 'Reparar Perfil' para corrigir.");
           }
-          
+
           if (error.message?.includes("infinite recursion")) {
-            throw new Error(`Erro de Recursão (RLS): O banco de dados está em loop. Use o botão abaixo para tentar recriar seu perfil ou aplique o SQL de correção.`);
+            throw new Error("Erro de configuração no banco de dados. Use o botão abaixo para tentar corrigir.");
           }
         }
-        throw error;
+        throw new Error("Erro ao carregar perfil. Tente novamente.");
       }
 
       if (data) {
