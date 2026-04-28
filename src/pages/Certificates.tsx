@@ -625,8 +625,7 @@ export const Certificates: React.FC = () => {
 
       if (shouldSave) {
         const pdfBlob = doc.output('blob');
-        const cpfLimpo = cert.colaborador_cpf.replace(/\D/g, '');
-        const fileName = `comprovantes/${cpfLimpo}/${cert.id}_${Date.now()}.pdf`;
+        const fileName = `comprovantes/${cert.colaborador_cpf}/${cert.id}_${Date.now()}.pdf`;
         
         // 1. Upload to Storage
         const { error: uploadError } = await supabase.storage

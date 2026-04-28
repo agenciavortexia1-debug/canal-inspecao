@@ -2,11 +2,7 @@ import React, { useState, useEffect } from "react";
 import { UserPlus, Shield, Loader2, FileText, X, ExternalLink, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmationModal } from "../components/ConfirmationModal";
-import { cn, maskCPF, unmaskCPF, validateCPF } from "../lib/utils";
-
-const MAX_CERT_SIZE_MB = 5;
-const ALLOWED_CERT_TYPES = ["application/pdf"];
-
+import { cn, maskCPF, unmaskCPF } from "../lib/utils";
 import { supabase } from "../lib/supabase";
 
 interface Profile {
@@ -168,16 +164,6 @@ export const Users: React.FC<UsersProps> = ({ currentUser }) => {
   };
 
   const handleCertFileChange = (index: number, file: File | null) => {
-    if (file) {
-      if (!ALLOWED_CERT_TYPES.includes(file.type)) {
-        toast.error("Apenas arquivos PDF são aceitos.");
-        return;
-      }
-      if (file.size > MAX_CERT_SIZE_MB * 1024 * 1024) {
-        toast.error(`O arquivo deve ter no máximo ${MAX_CERT_SIZE_MB} MB.`);
-        return;
-      }
-    }
     const newCerts = [...certs];
     newCerts[index].file = file;
     if (file && !newCerts[index].name) {
@@ -196,22 +182,6 @@ export const Users: React.FC<UsersProps> = ({ currentUser }) => {
     e.preventDefault();
     if (!perfil || !nome || !cpf || !cargo || !email || !senha) {
       toast.error("Por favor, preencha todos os campos obrigatórios.");
-      return;
-    }
-
-    if (!validateCPF(cpf)) {
-      toast.error("CPF inválido. Verifique os dígitos informados.");
-      return;
-    }
-
-    if (senha.length < 8) {
-      toast.error("A senha deve ter no mínimo 8 caracteres.");
-      return;
-    }
-
-    const nomeClean = nome.trim();
-    if (nomeClean.length < 3) {
-      toast.error("O nome completo deve ter pelo menos 3 caracteres.");
       return;
     }
 
@@ -286,12 +256,10 @@ export const Users: React.FC<UsersProps> = ({ currentUser }) => {
       }
     } catch (err: any) {
       console.error("Error creating user:", err);
-      if (err.message?.includes("rate limit exceeded") || err.message?.includes("over_email_send_rate_limit")) {
+      if (err.message?.includes("rate limit exceeded")) {
         toast.error("Limite de tentativas excedido. Por favor, aguarde alguns minutos.");
-      } else if (err.message?.includes("User already registered") || err.message?.includes("already been registered")) {
-        toast.error("Este e-mail já está cadastrado no sistema.");
       } else {
-        toast.error("Erro ao cadastrar usuário. Verifique os dados e tente novamente.");
+        toast.error("Erro ao cadastrar usuário: " + err.message);
       }
     } finally {
       setSubmitting(false);
@@ -470,14 +438,14 @@ export const Users: React.FC<UsersProps> = ({ currentUser }) => {
               </div>
               <div className="space-y-1.5">
                 <label className="text-[12px] font-medium uppercase tracking-wider">Senha Inicial *</label>
-                <input
-                  className="w-full p-2.5 border border-border2 focus:border-accent outline-none text-sm"
-                  type="password"
-                  placeholder="Mínimo 8 caracteres"
+                <input 
+                  className="w-full p-2.5 border border-border2 focus:border-accent outline-none text-sm" 
+                  type="password" 
+                  placeholder="Mínimo 6 caracteres" 
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   required
-                  minLength={8}
+                  minLength={6}
                 />
               </div>
             </div>
