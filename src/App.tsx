@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Topbar } from "./components/Topbar";
 import { Sidebar } from "./components/Sidebar";
 import { Login } from "./pages/Login";
@@ -19,6 +19,7 @@ export default function App() {
   const [activePage, setActivePage] = useState("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const profileChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const repairProfile = async () => {
     if (!needsProfile) return;
@@ -52,71 +53,68 @@ export default function App() {
     }
   };
 
+  const subscribeToProfileChanges = (userId: string) => {
+    if (profileChannelRef.current) {
+      supabase.removeChannel(profileChannelRef.current);
+    }
+    profileChannelRef.current = supabase
+      .channel(`profile-changes-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`
+        },
+        (payload) => {
+          const data = payload.new;
+          setUser({
+            id: data.id,
+            name: data.nome_completo,
+            role: data.perfil
+          });
+        }
+      )
+      .subscribe();
+  };
+
   useEffect(() => {
     const handleGlobalError = (event: PromiseRejectionEvent) => {
       if (event.reason?.message === "Failed to fetch") {
-        console.error("Global Failed to fetch detected:", event.reason);
         setAuthError("Erro de conexão com o servidor. Verifique sua internet.");
       }
     };
 
     window.addEventListener("unhandledrejection", handleGlobalError);
 
-    // Check active session
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (session) {
-          fetchProfile(session.user.id);
-        } else {
-          setLoading(false);
-        }
-      })
-      .catch(err => {
-        console.error("Supabase getSession error:", err);
-        setAuthError("Erro ao verificar sessão: " + (err.message || "Erro desconhecido"));
+    // onAuthStateChange fires immediately with INITIAL_SESSION — no need to call getSession separately
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
         setLoading(false);
-      });
+        if (profileChannelRef.current) {
+          supabase.removeChannel(profileChannelRef.current);
+          profileChannelRef.current = null;
+        }
+        return;
+      }
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
+      if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) {
         setAuthError(null);
         fetchProfile(session.user.id);
-
-        // Subscribe to real-time profile changes
-        const profileSubscription = supabase
-          .channel(`profile-changes-${session.user.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'profiles',
-              filter: `id=eq.${session.user.id}`
-            },
-            (payload) => {
-              console.log('Real-time profile update:', payload.new);
-              const data = payload.new;
-              setUser({
-                id: data.id,
-                name: data.nome_completo,
-                role: data.perfil
-              });
-            }
-          )
-          .subscribe();
-
-        return () => {
-          supabase.removeChannel(profileSubscription);
-        };
-      } else {
-        setUser(null);
+        subscribeToProfileChanges(session.user.id);
+      } else if (!session && event === 'INITIAL_SESSION') {
+        // No session on first load
         setLoading(false);
       }
     });
 
     return () => {
       subscription.unsubscribe();
+      if (profileChannelRef.current) {
+        supabase.removeChannel(profileChannelRef.current);
+      }
       window.removeEventListener("unhandledrejection", handleGlobalError);
     };
   }, []);
