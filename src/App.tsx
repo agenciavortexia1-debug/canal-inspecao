@@ -163,14 +163,6 @@ export default function App() {
     } catch (err: any) {
       console.error("Error fetching profile:", err);
       setAuthError(err.message || "Erro ao carregar perfil");
-      
-      const isRecoverable = err.message?.includes("Perfil não encontrado") || 
-                           err.message?.includes("Recursão") || 
-                           err.message?.includes("security policy");
-
-      if (!isRecoverable) {
-        await supabase.auth.signOut();
-      }
     } finally {
       setLoading(false);
     }
